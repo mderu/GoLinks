@@ -1,0 +1,207 @@
+@model GoLinks.Models.Views.EditModel
+
+@{
+    ViewData["Title"] = "Edit go/" + Model.LinkToEdit.ShortLink;
+}
+
+@*
+    TODO: Put this somewhere better
+    Stolen from https://stackoverflow.com/q/19480010/6876989
+    Another copy exists in New.cshtml.
+*@
+
+<style type="text/css">
+    [data-tip] {
+        position: relative;
+    }
+
+        [data-tip]:before {
+            content: '';
+            /* hides the tooltip when not hovered */
+            display: none;
+            content: '';
+            display: none;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 5px solid #1a1a1a;
+            position: absolute;
+            top: 30px;
+            left: 35px;
+            z-index: 8;
+            font-size: 0;
+            line-height: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+            top: 30px;
+            left: 35px;
+            z-index: 8;
+            font-size: 0;
+            line-height: 0;
+            width: 0;
+            height: 0;
+        }
+
+        [data-tip]:after {
+            display: none;
+            content: attr(data-tip);
+            position: absolute;
+            top: 35px;
+            left: 0px;
+            padding: 5px 8px;
+            background: #1a1a1a;
+            color: #fff;
+            z-index: 9;
+            font-size: 0.75em;
+            height: 18px;
+            line-height: 8px;
+            -webkit-border-radius: 3px;
+            -moz-border-radius: 3px;
+            border-radius: 3px;
+            white-space: nowrap;
+            word-wrap: normal;
+        }
+
+        [data-tip]:hover:before,
+        [data-tip]:hover:after {
+            display: block;
+        }
+</style>
+
+<script>
+function deleteClicked(e)
+{
+    if(!confirm('Are you you want to delete go/@Model.LinkToEdit.ShortLink?')) {
+        e.preventDefault();
+    }
+}
+</script>
+
+<div class="text-center" style="margin-bottom:25px">
+    <h1 class="display-4">Edit go/@Model.LinkToEdit.ShortLink</h1>
+</div>
+
+
+<div class="container border" style="padding:20px">
+    <form method="post">
+        <div class="text-danger" asp-validation-summary="ModelOnly"></div>
+        <div class="form-group row">
+            <div class="col-2">
+                <label asp-for="LinkModification.Owner" data-tip="The AD user or group to associate ownership of this link with."></label>
+            </div>
+            <div class="col-5">
+                <input type="text" asp-for="LinkModification.Owner" class="form-control" />
+            </div>
+            <span class="text-danger" asp-validation-for="LinkModification.Owner"></span>
+        </div>
+
+        <div class="form-group row">
+            <div class="col-2">
+                <label asp-for="LinkModification.ShortLink" data-tip="The path after go/ to use. See go/go-link-formatting for more details."></label>
+            </div>
+            <div class="col-5">
+                <input type="text" asp-for="LinkModification.ShortLink" class="form-control" />
+            </div>
+            <span class="text-danger" asp-validation-for="LinkModification.ShortLink"></span>
+        </div>
+
+        <div class="form-group row">
+            <div class="text-danger" asp-validation-summary="ModelOnly"></div>
+            <div class="col-2">
+                <label asp-for="LinkModification.DestinationLink" data-tip="The path to redirect to. Se go/go-link-formatting for more details."></label>
+            </div>
+            <div class="col-5">
+                <input type="text" asp-for="LinkModification.DestinationLink" class="form-control" />
+            </div>
+            <span class="text-danger" asp-validation-for="LinkModification.DestinationLink"></span>
+        </div>
+
+        <div class="form-group row">
+            <div class="col-2">
+                <input type="submit" asp-route-id="@Model.LinkToEdit.Id" asp-action="Apply" class="btn btn-primary" value="Edit Link" />
+            </div>
+            <div class="col-5">
+                <input type="submit" onclick="deleteClicked(event)" asp-route-id="@Model.LinkToEdit.Id" asp-action="Delete" class="btn btn-danger" value="Delete Link" style="float:right;">
+            </div>
+        </div>
+
+        <div class="container" style="padding:20px">
+            <span class="text-danger">@Model.ErrorMessage</span>
+            <span class="text-success">@Model.SuccessMessage</span>
+        </div>
+
+    </form>
+</div>
+
+<p style="margin-top:25px">
+    The destination string allows for values from the query string to be substituted into the URL path.
+    This can be done by inserting a the string <code> ^{&#60;query&#62;} </code>, where
+    <code>&#60;query&#62;</code> is one of the following:
+    <ul>
+        <li>An asterisk (*). This places everything in the query string at this location.</li>
+        <li>
+            An integer. This subsitutes the n-th (zero indexed) ampersand-delimited element in
+            the query string at the given location.
+        </li>
+        <li>A key in the query string. The corresponding value from the query string is placed in this location.</li>
+    </ul>
+    If no valid value can be found from the query string, the value is skipped. Below are some examples
+    of this in action:
+</p>
+
+<table class="table table-striped table-bordered table-sm" cellspacing="0" width="100%">
+    <thead>
+        <tr>
+            <th scope="col" class="th-sm">
+                Short Link
+            </th>
+            <th scope="col" class="th-sm">
+                Destination
+            </th>
+            <th scope="col" class="th-sm">
+                Result
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td scope="col" class="th-sm">
+                cl?<span style="color:green">123456</span>
+            </td>
+            <td scope="col" class="th-sm">
+                https://project.swarm.company.com/changes/<span style="color:green">^{*}</span>
+            </td>
+            <td scope="col" class="th-sm">
+                https://project.swarm.company.com/changes/<span style="color:green">123456</span>
+            </td>
+        </tr>
+        <tr>
+            <td scope="col" class="th-sm">
+                lol?<span style="color:green">na</span>&<span style="color:blue">Aspen100</span>
+            </td>
+            <td scope="col" class="th-sm">
+                https://<span style="color:green">^{0}</span>.op.gg/summoners/<span style="color:green">^{0}</span>/<span style="color:blue">^{1}</span>
+            </td>
+            <td scope="col" class="th-sm">
+                https://<span style="color:green">na</span>.op.gg/summoners/<span style="color:green">na</span>/<span style="color:blue">Aspen100</span>
+            </td>
+        </tr>
+        <tr>
+            <td scope="col" class="th-sm">
+                gh?<b>usr</b>=<span style="color:green">mderu</span>&<b>prj</b>=<span style="color:blue">Kodify</span>
+            </td>
+            <td scope="col" class="th-sm">
+                https://github.com/^{<b>usr</b>}/^{<b>prj</b>}
+            </td>
+            <td scope="col" class="th-sm">
+                https://github.com/<span style="color:green">mderu</span>/<span style="color:blue">Kodify</span>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<p>
+    Note that if you want to shortlink to something and preserve the query string, you will need to append <code>?^{*}</code>
+    to the end of your destination string. By default, if any Destination Link does not have formatting strings, the query
+    string is appended to the end.
+</p>

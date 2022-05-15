@@ -1,0 +1,128 @@
+﻿using GoLinks.Models;
+using LiteDB;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Web;
+
+namespace GoLinks.Controllers
+{
+    public class HomeController : Controller
+    {
+        [HttpGet]
+        [Route("/")]
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+        // Our Redirect route. Note that we allow slashes to allow users to create directories.
+        [HttpGet]
+        [Route("/{a}")]
+        [Route("/{a}/{b}")]
+        [Route("/{a}/{b}/{c}")]
+        [Route("/{a}/{b}/{c}/{d}")]
+        [Route("/{a}/{b}/{c}/{d}/{e}")]
+        [Route("/{a}/{b}/{c}/{d}/{e}/{f}")]
+        [Route("/{a}/{b}/{c}/{d}/{e}/{f}/{g}")]
+        public IActionResult HandleUrl(
+            [FromRoute] string a,
+            [FromRoute] string b,
+            [FromRoute] string c,
+            [FromRoute] string d,
+            [FromRoute] string e,
+            [FromRoute] string f,
+            [FromRoute] string g
+        )
+        {
+            string queryString = Request.QueryString.Value ?? "";
+            string fullPath = string.Join(
+                "/",
+                new List<string> { a, b, c, d, e, f, g }
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+            );
+
+            GoLink? link;
+            using (LiteDatabase db = new("Data/Links.db"))
+            {
+                var linkCollection = db.GetCollection<GoLink>();
+                link = linkCollection.Query().Where(l => l.ShortLink == fullPath).FirstOrDefault();
+                if (link is not null)
+                {
+                    link.NumUses += 1;
+                    linkCollection.Update(link);
+                }
+            }
+
+            if (link is null)
+            {
+                throw new NotImplementedException($"The shortlink \"{fullPath}\" does not exist.");
+            }
+
+            Console.WriteLine(link.NumUses);
+            return Redirect(ApplyFormatting(link.DestinationLink, queryString));
+        }
+
+        private string ApplyFormatting(string destinationUrl, string queryString)
+        {
+            if (string.IsNullOrEmpty(queryString))
+            {
+                return destinationUrl;
+            }
+            string[] paramArray = queryString.Length > 0
+                ? queryString[1..].Split('&')
+                : Array.Empty<string>();
+            var paramKvps = HttpUtility.ParseQueryString(queryString);
+
+            bool hasFormattingChange = false;
+            while (true)
+            {
+                var match = Regex.Match(destinationUrl, "\\^{(?<Query>[^{}]+)}");
+                if (!match.Success)
+                {
+                    break;
+                }
+                hasFormattingChange = true;
+                string query = match.Groups["Query"].Value;
+                string replacement;
+                if (query == "*")
+                {
+                    replacement = queryString.Trim('?');
+                }
+                else if (int.TryParse(query, out int result))
+                {
+                    try
+                    {
+                        replacement = paramArray[result];
+                    }
+                    catch (Exception)
+                    {
+                        replacement = "";
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        replacement = paramKvps[query] ?? "";
+                    }
+                    catch (Exception)
+                    {
+                        replacement = "";
+                    }
+                }
+                destinationUrl = destinationUrl.Replace(
+                    match.Groups[0].Value,
+                    replacement,
+                    comparisonType: StringComparison.OrdinalIgnoreCase);
+            }
+            if (!hasFormattingChange)
+            {
+                destinationUrl += queryString;
+            }
+            return destinationUrl;
+        }
+    }
+}

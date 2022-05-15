@@ -1,0 +1,4 @@
+﻿This file exists so source control picks up the empty directory.
+
+A database will be created here when it is needed to be written to or read
+from.
