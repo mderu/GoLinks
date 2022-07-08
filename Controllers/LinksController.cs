@@ -1,5 +1,3 @@
-using GoLinks.Models;
-using LiteDB;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GoLinks.Controllers
@@ -10,7 +8,7 @@ namespace GoLinks.Controllers
         [Route("Links/Browse")]
         public IActionResult Browse()
         {
-            return View(new Models.Views.BrowseModel());
+            return View("Browse", new Models.Views.BrowseModel(Request.QueryString.Value ?? ""));
         }
 
         [HttpGet]
