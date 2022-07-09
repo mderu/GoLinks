@@ -1,6 +1,7 @@
 ﻿using GoLinks.Models;
 using LiteDB;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,7 +59,12 @@ namespace GoLinks.Controllers
 
             if (link is null)
             {
-                throw new NotImplementedException($"The shortlink \"{fullPath}\" does not exist.");
+                int lastSlash = fullPath.LastIndexOf('/');
+                lastSlash = lastSlash < 0 ? fullPath.Length : lastSlash;
+                string prefix = fullPath.Substring(0, lastSlash);
+
+                string newUrl = QueryHelpers.AddQueryString("/Links/Browse", nameof(GoLink.ShortLink), prefix);
+                return Redirect(newUrl);
             }
 
             Console.WriteLine(link.NumUses);
