@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using LiteDB;
 using System.Linq;
+using GoLinks.Database;
 
 namespace GoLinks.Models.Views
 {
@@ -22,7 +22,7 @@ namespace GoLinks.Models.Views
             ErrorMessage = null;
         }
 
-        public void OnPost()
+        public void OnPost(GoLinkContext dbContext)
         {
             if (!LinkRequest.IsValid(out string errorMessage))
             {
@@ -31,29 +31,23 @@ namespace GoLinks.Models.Views
                 return;
             }
 
-            using (LiteDatabase db = new("Data/Links.db"))
+            var goLinks = dbContext.GoLinks;
+
+            var existingLink = goLinks
+                .Where(link => link.ShortLink == LinkRequest.ShortLink)
+                .FirstOrDefault();
+
+            if (!(existingLink is null))
             {
-                var linkCollection = db.GetCollection<GoLink>();
-                linkCollection.EnsureIndex(nameof(GoLink.ShortLink), unique: true);
-                linkCollection.EnsureIndex(nameof(GoLink.Owner), unique: false);
-                linkCollection.EnsureIndex(nameof(GoLink.NumUses), unique: false);
-
-                var existingLink = linkCollection
-                    .Find(link => link.ShortLink == LinkRequest.ShortLink)
-                    .FirstOrDefault();
-
-                if (!(existingLink is null))
-                {
-                    ErrorMessage = 
-                        $"Go link <a href=\"/Links/Edit?{existingLink.Id}\">go/{existingLink.ShortLink}</a> " +
-                        $"already exists.";
-                    SuccessMessage = null;
-                    return;
-                }
-
-                linkCollection.Insert(new GoLink(LinkRequest));
+                ErrorMessage = 
+                    $"Go link <a href=\"/Links/Edit?{existingLink.Id}\">go/{existingLink.ShortLink}</a> " +
+                    $"already exists.";
+                SuccessMessage = null;
+                return;
             }
 
+            goLinks.Add(new GoLink(LinkRequest));
+            dbContext.SaveChanges();
 
             SuccessMessage = $"Success! go/{LinkRequest.ShortLink} now points to {LinkRequest.DestinationLink}.";
             ErrorMessage = null;

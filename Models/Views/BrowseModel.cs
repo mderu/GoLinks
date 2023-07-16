@@ -1,6 +1,7 @@
-using LiteDB;
+using GoLinks.Database;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using System.Linq;
 using System.Web;
 
 namespace GoLinks.Models.Views
@@ -10,21 +11,20 @@ namespace GoLinks.Models.Views
         [BindProperty]
         public List<GoLink> GoLinks { get; set; } = new();
 
-        public BrowseModel(string queryString = "")
+        public BrowseModel(GoLinkContext dbContext, string queryString = "")
         {
-            using LiteDatabase db = new("Data/Links.db");
-            var linkCollection = db.GetCollection<GoLink>();
+            var goLinks = dbContext.GoLinks;
 
             var paramKvps = HttpUtility.ParseQueryString(queryString);
             if (string.IsNullOrEmpty(queryString))
             {
-                GoLinks = linkCollection.Query().OrderBy(x => x.NumUses).Limit(50).ToList();
+                
+                GoLinks = goLinks.OrderBy(x => x.NumUses).Take(50).ToList();
             }
             else if (paramKvps.Count > 0)
             {
                 int page = 1;
                 int limit = 100;
-                var query = linkCollection.Query();
                 foreach (var paramKvp in paramKvps)
                 {
                     string param = paramKvp.ToString() ?? "";
@@ -37,11 +37,11 @@ namespace GoLinks.Models.Views
 
                     if (param == nameof(GoLink.Owner).ToLowerInvariant())
                     {
-                        query.Where(x => x.Owner.StartsWith(value));
+                        goLinks.Where(x => x.Owner.StartsWith(value));
                     }
                     else if (param == nameof(GoLink.ShortLink).ToLowerInvariant())
                     {
-                        query.Where(x => x.ShortLink.StartsWith(value));
+                        goLinks.Where(x => x.ShortLink.StartsWith(value));
                     }
                     else if (param == "page")
                     {
@@ -49,10 +49,10 @@ namespace GoLinks.Models.Views
                     }
                 }
 
-                GoLinks = query
+                GoLinks = goLinks
                     .OrderBy(x => x.NumUses)
-                    .Offset(limit * (page - 1))
-                    .Limit(limit)
+                    .Skip(limit * (page - 1))
+                    .Take(limit)
                     .ToList();
             }
         }

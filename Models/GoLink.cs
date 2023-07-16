@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,11 +9,13 @@ using System.Text.RegularExpressions;
 
 namespace GoLinks.Models
 {
+    [Index(nameof(Id), nameof(ShortLink), nameof(Owner), nameof(NumUses))]
     public class GoLink
     {
         /// <summary>
-        /// An ID used for LiteDB.
+        /// The primary key in the database.
         /// </summary>
+        [Key]
         public int Id { get; set; }
 
         [BindProperty, Required]

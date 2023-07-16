@@ -1,5 +1,5 @@
-﻿using GoLinks.Models;
-using LiteDB;
+﻿using GoLinks.Database;
+using GoLinks.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using System;
@@ -12,6 +12,12 @@ namespace GoLinks.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly GoLinkContext dbContext;
+        public HomeController(GoLinkContext dbContext)
+        {
+            this.dbContext = dbContext;
+        }
+
         [HttpGet]
         [Route("/")]
         public IActionResult Index()
@@ -46,22 +52,18 @@ namespace GoLinks.Controllers
             );
 
             GoLink? link;
-            using (LiteDatabase db = new("Data/Links.db"))
+            link = dbContext.GoLinks.Where(l => l.ShortLink == fullPath).FirstOrDefault();
+            if (link is not null)
             {
-                var linkCollection = db.GetCollection<GoLink>();
-                link = linkCollection.Query().Where(l => l.ShortLink == fullPath).FirstOrDefault();
-                if (link is not null)
-                {
-                    link.NumUses += 1;
-                    linkCollection.Update(link);
-                }
+                link.NumUses += 1;
+                dbContext.GoLinks.Update(link);
             }
 
             if (link is null)
             {
                 int lastSlash = fullPath.LastIndexOf('/');
                 lastSlash = lastSlash < 0 ? fullPath.Length : lastSlash;
-                string prefix = fullPath.Substring(0, lastSlash);
+                string prefix = fullPath[..lastSlash];
 
                 string newUrl = QueryHelpers.AddQueryString("/Links/Browse", nameof(GoLink.ShortLink), prefix);
                 return Redirect(newUrl);

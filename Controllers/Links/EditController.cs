@@ -1,11 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
 using GoLinks.Models;
-using LiteDB;
+using GoLinks.Database;
+using System.Linq;
 
 namespace GoLinks.Controllers.Edit
 {
     public class LinksController : Controller
     {
+        private readonly GoLinkContext dbContext;
+        public LinksController(GoLinkContext dbContext)
+        {
+            this.dbContext = dbContext;
+        }
+
         [HttpGet]
         [Route("Links/Edit/View/{id?}")]
         public IActionResult Edit(int? id)
@@ -21,10 +28,7 @@ namespace GoLinks.Controllers.Edit
                 return RerouteFromEditToNew();
             }*/
 
-            using LiteDatabase db = new("Data/Links.db");
-            var linkCollection = db.GetCollection<GoLink>();
-            GoLink? linkToEdit = linkCollection
-                .Query()
+            GoLink? linkToEdit = dbContext.GoLinks
                 .Where(link => link.Id == id)
                 .FirstOrDefault();
 
@@ -43,7 +47,7 @@ namespace GoLinks.Controllers.Edit
                 return RerouteFromEditToNew();
             }
 
-            model.ApplyEdit(id.Value);
+            model.ApplyEdit(dbContext, id.Value);
             return View("Edit", model);
         }
 
@@ -56,9 +60,9 @@ namespace GoLinks.Controllers.Edit
                 return RerouteFromEditToNew();
             }
 
-            if (model.Delete(id.Value))
+            if (model.Delete(dbContext, id.Value))
             {
-                return View("Browse", new Models.Views.BrowseModel());
+                return View("Browse", new Models.Views.BrowseModel(dbContext));
             }
             model.ErrorMessage = $"Unable to delete link #{id}, unknown ID.";
             model.SuccessMessage = null;

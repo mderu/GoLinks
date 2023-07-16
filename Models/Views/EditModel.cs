@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using LiteDB;
 using System;
+using GoLinks.Database;
+using System.Linq;
 
 namespace GoLinks.Models.Views
 {
@@ -32,7 +33,7 @@ namespace GoLinks.Models.Views
             ErrorMessage = null;
         }
 
-        public void ApplyEdit(int id)
+        public void ApplyEdit(GoLinkContext dbContext, int id)
         {
             if (!LinkModification.IsValid(out string errorMessage))
             {
@@ -46,10 +47,8 @@ namespace GoLinks.Models.Views
             //
             // In a way, this limitation forces us to implement a feature that allows us to edit a link without
             // knowing the exact details of what the link's properties are.
-            using LiteDatabase db = new("Data/Links.db");
-            var linkCollection = db.GetCollection<GoLink>();
-            LinkToEdit = linkCollection
-                .Query()
+            var goLinks = dbContext.GoLinks;
+            LinkToEdit = goLinks
                 .Where(link => link.Id == id)
                 .First();
             if (LinkToEdit is null)
@@ -77,17 +76,22 @@ namespace GoLinks.Models.Views
             LinkToEdit.Owner = LinkModification.Owner!;
             LinkToEdit.ShortLink = LinkModification.ShortLink!;
             LinkToEdit.DestinationLink = LinkModification.DestinationLink!;
-            linkCollection.Update(LinkToEdit.Id, LinkToEdit);
+            goLinks.Update(LinkToEdit);
+            dbContext.SaveChanges();
 
             SuccessMessage = $"Success! go/{LinkToEdit.ShortLink} has the following edits: {modifications.Trim()}.";
             ErrorMessage = null;
         }
 
-        public bool Delete(int id)
+        public bool Delete(GoLinkContext dbContext, int id)
         {
-            using LiteDatabase db = new("Data/Links.db");
-            var linkCollection = db.GetCollection<GoLink>();
-            return linkCollection.Delete(id);
+            GoLink? foundElement = dbContext.GoLinks.FirstOrDefault(goLink => goLink.Id == id);
+            if (foundElement is not null)
+            {
+                dbContext.GoLinks.Remove(foundElement);
+                dbContext.SaveChanges();
+            }
+            return foundElement is not null;
         }
     }
 }
