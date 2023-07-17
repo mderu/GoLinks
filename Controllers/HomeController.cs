@@ -52,12 +52,7 @@ namespace GoLinks.Controllers
             );
 
             GoLink? link;
-            link = dbContext.GoLinks.Where(l => l.ShortLink == fullPath).FirstOrDefault();
-            if (link is not null)
-            {
-                link.NumUses += 1;
-                dbContext.GoLinks.Update(link);
-            }
+            link = dbContext.GoLinks.FirstOrDefault(l => l.ShortLink == fullPath);
 
             if (link is null)
             {
@@ -69,8 +64,12 @@ namespace GoLinks.Controllers
                 return Redirect(newUrl);
             }
 
-            Console.WriteLine(link.NumUses);
+            link.NumUses += 1;
+            dbContext.GoLinks.Update(link);
+            dbContext.SaveChanges();
+
             return Redirect(ApplyFormatting(link.DestinationLink, queryString));
+
         }
 
         private string ApplyFormatting(string destinationUrl, string queryString)
